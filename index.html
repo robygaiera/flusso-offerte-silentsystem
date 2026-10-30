@@ -1,0 +1,946 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Flusso Offerte Silentsystem</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: guida a colonna larga. Mappa a pipeline in testa, poi un "canale" CH1–CH5 per fase: flusso a spina verticale a sinistra, strumenti e checklist a destra */
+:root{
+  --bg:#F1F3F8; --surface:#FFFFFF; --ink:#121722; --muted:#566074; --line:#D8DDE7;
+  --accent:#2747D0; --accent-soft:#E4E9FC; --on-accent:#FFFFFF;
+  --ok:#1B7348; --ok-soft:#DFF1E7; --warn:#8A5700; --warn-soft:#FAEED3; --stop:#B0271F; --stop-soft:#FAE4E2;
+  --display:"Bricolage Grotesque","Avenir Next","Segoe UI",sans-serif;
+  --body:"Instrument Sans","Helvetica Neue",Arial,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,monospace;
+  --r:10px;
+  --paper:#FFFFFF; --paper-ink:#000000; --paper-link:#0645AD;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0D1118; --surface:#151B25; --ink:#E7EBF2; --muted:#9AA4B6; --line:#283041;
+    --accent:#8DA4FF; --accent-soft:#1C2648; --on-accent:#0D1118;
+    --ok:#62D19C; --ok-soft:#11281D; --warn:#F0B652; --warn-soft:#2B2110; --stop:#FF8F86; --stop-soft:#2E1615;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0D1118; --surface:#151B25; --ink:#E7EBF2; --muted:#9AA4B6; --line:#283041;
+  --accent:#8DA4FF; --accent-soft:#1C2648; --on-accent:#0D1118;
+  --ok:#62D19C; --ok-soft:#11281D; --warn:#F0B652; --warn-soft:#2B2110; --stop:#FF8F86; --stop-soft:#2E1615;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.55}
+.wrap{max-width:1120px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1,h2,h3,h4{text-wrap:balance}
+p{margin:0}
+a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+
+/* Header */
+.top{padding-block:48px 28px}
+.eyebrow{font-family:var(--mono);font-size:.75rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(2.2rem,5.2vw,3.5rem);line-height:1.05;letter-spacing:-.02em;margin:10px 0 14px}
+.lead{font-size:1.1rem;max-width:62ch;color:var(--ink)}
+.draft{margin-top:18px;display:flex;gap:10px;align-items:flex-start;max-width:70ch;padding:12px 14px;border-radius:8px;background:var(--warn-soft);color:var(--ink);font-size:.93rem}
+.legend{display:flex;flex-wrap:wrap;gap:8px 20px;margin-top:22px;font-size:.88rem;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:8px}
+.mk{width:12px;height:12px;border:2px solid var(--accent);background:var(--surface);flex:none}
+.mk.action{border-radius:3px}
+.mk.decision{transform:rotate(45deg) scale(.85);background:var(--accent)}
+.mk.end{border-radius:50%;background:var(--ok);border-color:var(--ok)}
+.tbc{font-family:var(--mono);font-size:.75rem;font-weight:500;text-transform:uppercase;letter-spacing:.06em;color:var(--warn);border:1px dashed var(--warn);border-radius:4px;padding:1px 6px;white-space:nowrap;vertical-align:1px}
+
+/* Nav */
+.nav{position:sticky;top:env(safe-area-inset-top,0px);z-index:10;background:var(--bg);background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.nav-inner{display:flex;gap:6px;overflow-x:auto;padding-block:10px;scrollbar-width:none}
+.nav-inner::-webkit-scrollbar{display:none}
+.nav a{white-space:nowrap;font-size:.88rem;font-weight:500;padding:6px 12px;border-radius:999px;color:var(--muted);text-decoration:none;border:1px solid transparent}
+.nav a .n{font-family:var(--mono);font-size:.72rem;margin-right:6px;color:var(--accent)}
+.nav a:hover{color:var(--ink)}
+.nav a.active{background:var(--surface);border-color:var(--line);color:var(--ink)}
+
+section[id]{scroll-margin-top:64px}
+
+/* Mappa */
+.map-sec{padding-block:32px 40px}
+.sec-title{font-family:var(--display);font-weight:700;font-size:1.4rem;margin:0 0 16px}
+.map{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:14px}
+.map-col{display:flex;flex-direction:column;gap:8px;min-width:0}
+.map-step{position:relative;display:flex;flex-direction:column;gap:4px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px;text-decoration:none;color:inherit;min-height:138px}
+.map-step:hover{border-color:var(--accent)}
+.map-step::after{content:"";position:absolute;right:-11px;top:50%;width:8px;height:8px;border-top:2px solid var(--muted);border-right:2px solid var(--muted);transform:translateY(-50%) rotate(45deg)}
+.map-col:last-child .map-step::after{display:none}
+.map-step .ch{font-family:var(--mono);font-size:.75rem;color:var(--accent)}
+.map-step strong{font-size:1rem;line-height:1.25}
+.map-step span.d{font-size:.85rem;color:var(--muted);line-height:1.4}
+.map-step.end{background:var(--ok-soft);border-color:transparent}
+.map-step.end .ch{color:var(--ok)}
+.exits{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.exits li{font-size:.8rem;line-height:1.35;color:var(--muted);padding-left:14px;position:relative}
+.exits li::before{content:"";position:absolute;left:0;top:.45em;width:7px;height:7px;border-radius:50%;background:var(--accent)}
+.exits li.warn::before{background:var(--warn)}
+.exits li.stop::before{background:var(--stop)}
+@media (max-width:980px){
+  .map{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .map-step::after{display:none}
+}
+@media (max-width:560px){
+  .map{grid-template-columns:minmax(0,1fr)}
+  .map-step{min-height:0}
+}
+
+/* Fasi */
+.phase{padding-top:44px;padding-bottom:12px;border-top:1px solid var(--line)}
+.phase-head{display:flex;gap:16px;align-items:flex-start;margin-bottom:26px}
+.ch-tag{flex:none;font-family:var(--mono);font-size:.85rem;font-weight:500;color:var(--on-accent);background:var(--accent);border-radius:6px;padding:4px 8px;margin-top:7px}
+h2{font-family:var(--display);font-weight:700;font-size:clamp(1.6rem,3.2vw,2.2rem);letter-spacing:-.01em;line-height:1.15;margin:0}
+.goal{color:var(--muted);max-width:62ch;margin-top:6px}
+.phase-body{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);gap:28px;align-items:start}
+@media (max-width:880px){.phase-body{grid-template-columns:minmax(0,1fr)}}
+.side{display:grid;gap:16px;min-width:0}
+
+/* Flusso */
+.flow{list-style:none;margin:0;padding:0 0 0 30px;position:relative;display:grid;gap:14px;min-width:0}
+.flow::before{content:"";position:absolute;left:10px;top:10px;bottom:10px;width:2px;background:var(--line)}
+.node{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;min-width:0}
+.node::before{content:"";position:absolute;left:-26px;top:19px;width:12px;height:12px;background:var(--surface);border:2px solid var(--accent)}
+.node.action::before{border-radius:3px}
+.node.decision::before{transform:rotate(45deg);background:var(--accent)}
+.node.end{background:var(--ok-soft);border-color:transparent}
+.node.end::before{border-radius:50%;background:var(--ok);border-color:var(--ok)}
+.kind{font-family:var(--mono);font-size:.75rem;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+.node h3{font-family:var(--body);font-weight:600;font-size:1.05rem;line-height:1.3;margin:2px 0 6px}
+.node > p + p{margin-top:6px}
+.small{font-size:.86rem;color:var(--muted)}
+.branches{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px;margin-top:10px}
+.branch{border-radius:8px;padding:10px 12px;background:var(--bg);border:1px solid var(--line);font-size:.92rem;min-width:0}
+.b-label{display:inline-block;font-weight:600;font-size:.78rem;padding:2px 9px;border-radius:999px;margin-bottom:5px;background:var(--accent-soft);color:var(--accent)}
+.branch.go .b-label{background:var(--ok-soft);color:var(--ok)}
+.branch.warn .b-label{background:var(--warn-soft);color:var(--warn)}
+.branch.stop .b-label{background:var(--stop-soft);color:var(--stop)}
+.goto{display:inline-block;margin-top:6px;font-family:var(--mono);font-size:.74rem;color:var(--accent);text-decoration:none;border:1px solid var(--line);border-radius:4px;padding:1px 6px;background:var(--surface)}
+.goto:hover{border-color:var(--accent)}
+
+/* Card e liste */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px;min-width:0}
+.card h3{font-family:var(--display);font-weight:600;font-size:1.15rem;margin:0 0 10px}
+.tight{margin:0;padding-left:18px;display:grid;gap:6px}
+.tight li{padding-left:2px}
+.card .small{margin-top:10px}
+
+/* CH2 */
+.rule{display:flex;gap:14px;align-items:flex-start;background:var(--accent-soft);border-radius:var(--r);padding:14px 16px;margin-bottom:22px;max-width:80ch}
+.rule strong{font-family:var(--mono);font-size:.75rem;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);flex:none;margin-top:3px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.chip{font:inherit;font-size:.9rem;font-weight:500;padding:7px 14px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+.chip:hover{border-color:var(--accent)}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.kit{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:20px}
+.kit-head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px 16px;align-items:baseline;margin-bottom:16px}
+.kit-head h3{font-family:var(--display);font-weight:600;font-size:1.3rem;margin:0}
+.kit-head p{color:var(--muted);font-size:.92rem;flex-basis:100%}
+.kit-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.kit-cell{border-top:1px solid var(--line);padding-top:10px;min-width:0}
+.kit-cell.wide{grid-column:1/-1}
+.kit-cell.note{border-top:0;background:var(--bg);border-radius:8px;padding:10px 12px;font-size:.92rem}
+.label{display:block;font-family:var(--mono);font-size:.75rem;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.models{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.model{font-family:var(--mono);font-size:.82rem;background:var(--accent-soft);color:var(--accent);padding:1px 6px;border-radius:4px;white-space:nowrap}
+@media (max-width:620px){.kit-grid{grid-template-columns:minmax(0,1fr)}}
+.facts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:22px}
+@media (max-width:900px){.facts{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:480px){.facts{grid-template-columns:minmax(0,1fr)}}
+.fact{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.fact .big{font-family:var(--display);font-weight:700;font-size:1.6rem;line-height:1.1;font-variant-numeric:tabular-nums}
+.fact p{font-size:.9rem;color:var(--muted)}
+
+/* Strumenti */
+.tool{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px;display:grid;gap:16px;min-width:0}
+.tool-head{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between}
+.tool-head h3{font-family:var(--display);font-weight:600;font-size:1.15rem;margin:0}
+.tool-note{font-size:.82rem;color:var(--muted)}
+.btn{font:inherit;font-size:.9rem;font-weight:600;padding:7px 14px;border-radius:8px;border:1px solid var(--accent);background:var(--accent);color:var(--on-accent);cursor:pointer}
+.btn.ghost{background:transparent;color:var(--accent)}
+.seg{display:inline-flex;flex-wrap:wrap;justify-self:start;gap:4px;padding:4px;border:1px solid var(--line);border-radius:10px;background:var(--bg)}
+.seg label{position:relative;cursor:pointer}
+.seg input{position:absolute;opacity:0;inset:0;margin:0;cursor:pointer}
+.seg span{display:block;border-radius:7px;padding:6px 12px;font-size:.88rem;font-weight:500;color:var(--muted)}
+.seg input:checked + span{background:var(--accent);color:var(--on-accent)}
+.seg input:focus-visible + span{outline:2px solid var(--accent);outline-offset:-2px}
+.group h4{font-size:.92rem;font-weight:600;margin:0 0 4px;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.group h4 small{font-weight:400;color:var(--muted);font-size:.8rem}
+.checks{display:grid}
+.check{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--line);cursor:pointer;font-size:.93rem}
+.check:last-child{border-bottom:0}
+.check input{width:18px;height:18px;margin:2px 0 0;accent-color:var(--accent);flex:none;cursor:pointer}
+.status{display:grid;gap:2px;padding:10px 12px;border-radius:8px;background:var(--accent-soft);color:var(--accent)}
+.status b{font-size:.95rem}
+.status span{font-size:.85rem;color:var(--ink)}
+.status.warn{background:var(--warn-soft);color:var(--warn)}
+.status.ok{background:var(--ok-soft);color:var(--ok)}
+.field{display:grid;gap:6px}
+.field label{font-size:.85rem;font-weight:600}
+.field input,.field textarea{font:inherit;font-size:.92rem;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px 11px;width:100%}
+.field textarea{min-height:230px;resize:vertical;line-height:1.5}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.copied{font-size:.85rem;color:var(--ok)}
+
+/* CH5 */
+.checks-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+@media (max-width:620px){.checks-2{grid-template-columns:minmax(0,1fr)}}
+.steps{margin:0;padding-left:20px;display:grid;gap:8px}
+
+/* Domande aperte */
+.open{padding-top:44px;padding-bottom:28px;border-top:1px solid var(--line)}
+.open-list{margin:0;padding-left:22px;columns:2;column-gap:40px}
+.open-list li{break-inside:avoid;margin-bottom:8px}
+@media (max-width:760px){.open-list{columns:1}}
+.foot{padding-block:20px 48px;color:var(--muted);font-size:.85rem}
+
+/* Compatibilità */
+.compat-notes{display:grid;gap:8px;max-width:80ch;margin-bottom:16px;font-size:.95rem}
+.compat-grid{display:grid;gap:20px}
+.compat{margin:0;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;min-width:0}
+.compat figcaption{font-family:var(--display);font-weight:600;font-size:1.1rem;margin-bottom:10px}
+.compat-scroll{overflow-x:auto}
+.compat table{border-collapse:collapse;font-size:.85rem;width:100%;min-width:560px}
+.compat th,.compat td{border:1px solid var(--line);padding:6px 8px;text-align:center}
+.compat thead th{font-family:var(--mono);font-size:.78rem;font-weight:500;white-space:nowrap}
+.compat thead th.fam{font-family:var(--body);font-size:.75rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);background:var(--bg)}
+.compat tbody th[scope="row"]{text-align:left;font-family:var(--mono);font-size:.8rem;font-weight:500;white-space:nowrap}
+.compat tr.grp th{text-align:left;font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);background:var(--bg);font-weight:600}
+.compat td.yes{color:var(--ok);font-weight:700}
+.compat td.no{color:var(--stop);font-weight:700;background:var(--stop-soft)}
+.compat td.part{color:var(--warn);background:var(--warn-soft);font-size:.75rem;line-height:1.3}
+
+/* Mail offerta */
+.mail-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media (max-width:620px){.mail-form{grid-template-columns:minmax(0,1fr)}}
+.field select{font:inherit;font-size:.92rem;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px 11px;width:100%}
+.mail-preview{margin-top:6px;background:var(--paper);color:var(--paper-ink);border:1px solid var(--line);border-radius:8px;padding:20px;overflow-x:auto}
+.mail-preview a{color:var(--paper-link)}
+.mail-code summary{cursor:pointer;font-size:.85rem;color:var(--muted)}
+.mail-code textarea{margin-top:8px;width:100%;min-height:160px;font-family:var(--mono);font-size:.75rem;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px}
+</style>
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font-size:16px}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+
+
+<header class="wrap top">
+  <div class="eyebrow">Silentsystem · Offerte</div>
+  <h1>Dalla richiesta al bonifico</h1>
+  <p class="lead">Il percorso da seguire per ogni richiesta di noleggio o acquisto: come leggerla, quale materiale proporre, quali dati chiedere, come costruire il preventivo e quando una prenotazione si può dire confermata.</p>
+  <div class="legend" aria-label="Legenda">
+    <span><i class="mk action"></i>Azione da fare</span>
+    <span><i class="mk decision"></i>Decisione: scegli il ramo</span>
+    <span><i class="mk end"></i>Punto di arrivo</span>
+  </div>
+</header>
+
+<nav class="nav" aria-label="Fasi">
+  <div class="wrap nav-inner">
+    <a href="#mappa"><span class="n">00</span>Mappa</a>
+    <a href="#ch1"><span class="n">CH1</span>Analisi</a>
+    <a href="#ch2"><span class="n">CH2</span>Materiale</a>
+    <a href="#ch3"><span class="n">CH3</span>Dati</a>
+    <a href="#ch4"><span class="n">CH4</span>Preventivo</a>
+    <a href="#ch5"><span class="n">CH5</span>Contratto e bonifico</a>
+  </div>
+</nav>
+
+<main>
+<section id="mappa" class="wrap map-sec">
+  <h2 class="sec-title">La mappa in breve</h2>
+  <div class="map">
+    <div class="map-col">
+      <a class="map-step" href="#ch1"><span class="ch">CH1</span><strong>Analisi della richiesta</strong><span class="d">Chi scrive, cosa chiede, quanto è urgente</span></a>
+      <ul class="exits"><li class="stop">Non pertinente: archivia</li><li class="warn">Entro 48 ore al Sud o sulle isole: solo con ritiro del cliente</li></ul>
+    </div>
+    <div class="map-col">
+      <a class="map-step" href="#ch2"><span class="ch">CH2</span><strong>Scelta del materiale</strong><span class="d">Dal tipo di evento a canali, cuffie e trasmettitori</span></a>
+      <ul class="exits"><li>Dubbio tecnico: chiedi ai colleghi</li></ul>
+    </div>
+    <div class="map-col">
+      <a class="map-step" href="#ch3"><span class="ch">CH3</span><strong>Raccolta dati</strong><span class="d">Completi? Se no, chiedi solo quello che manca</span></a>
+      <ul class="exits"><li class="warn">Dati mancanti: messaggio al cliente, poi ricontrolli</li><li class="stop">Nessuna risposta: sollecito, poi archivia</li></ul>
+    </div>
+    <div class="map-col">
+      <a class="map-step" href="#ch4"><span class="ch">CH4</span><strong>Preventivo</strong><span class="d">Disponibilità, offerta SISY, invio e follow-up</span></a>
+      <ul class="exits"><li class="warn">Non disponibile: proponi un'alternativa</li><li>Modifiche: nuova versione</li><li class="stop">Rifiuto: chiusa come persa</li></ul>
+    </div>
+    <div class="map-col">
+      <a class="map-step" href="#ch5"><span class="ch">CH5</span><strong>Contratto e bonifico</strong><span class="d">Sottoscrizione dal portale e pagamento arrivato</span></a>
+      <ul class="exits"><li class="warn">Importo errato: integrazione</li><li>Ente pubblico: niente anticipo, paga su fattura</li></ul>
+    </div>
+    <div class="map-col">
+      <a class="map-step end" href="#confermato"><span class="ch">OK</span><strong>Confermato</strong><span class="d">Il magazzino prepara e spedisce con DHL Express</span></a>
+    </div>
+  </div>
+</section>
+
+<!-- CH1 -->
+<section id="ch1" class="phase">
+  <div class="wrap">
+    <div class="phase-head"><span class="ch-tag">CH1</span><div><h2>Analisi della richiesta</h2><p class="goal">In pochi minuti capisci chi ti scrive, cosa chiede e con che urgenza. Da queste risposte dipende la strada che prende la richiesta.</p></div></div>
+    <div class="phase-body">
+      <ol class="flow">
+        <li class="node action">
+          <span class="kind">Azione</span>
+          <h3>Leggi tutta la richiesta e registrala</h3>
+          <p>Le richieste arrivano dal modulo preventivo del sito, dalle caselle email su Helpmonks, da telefono o WhatsApp. Leggi anche allegati e firma dell'email: spesso ci sono già data, luogo o ragione sociale.</p>
+          <p class="small">Registrala sempre nel nostro CRM.</p>
+        </li>
+        <li class="node decision">
+          <span class="kind">Decisione</span>
+          <h3>È una richiesta pertinente?</h3>
+          <div class="branches">
+            <div class="branch stop"><span class="b-label">No</span><p>Spam, proposte di fornitori, candidature: archivia o inoltra a chi se ne occupa.</p></div>
+            <div class="branch go"><span class="b-label">Sì</span><p>Prosegui.</p></div>
+          </div>
+        </li>
+        <li class="node decision">
+          <span class="kind">Decisione</span>
+          <h3>Noleggio o acquisto?</h3>
+          <div class="branches">
+            <div class="branch go"><span class="b-label">Acquisto</span><p>Lo gestisci tu, con le stesse fasi. Cambiano due cose: non c'è nessun contratto da firmare e il pagamento è anticipato al 100%, tranne per gli enti pubblici (split payment, pagano su fattura). Cauzione, ritiro e restituzione valgono solo per il noleggio.</p></div>
+            <div class="branch go"><span class="b-label">Noleggio</span><p>Prosegui con questa guida.</p></div>
+          </div>
+        </li>
+        <li class="node decision">
+          <span class="kind">Decisione</span>
+          <h3>Quando è l'evento?</h3>
+          <div class="branches">
+            <div class="branch stop"><span class="b-label">Entro 48 ore</span><p>Telefona o scrivi su WhatsApp subito. Prima di tutto valuta la fattibilità: il materiale c'è e arriva in tempo? Dal Lazio in giù, e soprattutto sulle isole, meglio non spedire, a meno che il cliente non ritiri il materiale in magazzino. Se serve, si valuta una consegna dedicata con mezzi propri.</p></div>
+            <div class="branch warn"><span class="b-label">Entro 10 giorni</span><p>Priorità alta: rispondi in giornata e controlla la disponibilità prima di preparare il preventivo.</p></div>
+            <div class="branch go"><span class="b-label">Oltre 10 giorni</span><p>Flusso normale. Sul sito promettiamo una risposta entro 24 ore.</p></div>
+          </div>
+        </li>
+        <li class="node decision">
+          <span class="kind">Decisione</span>
+          <h3>Cliente nuovo o già acquisito?</h3>
+          <div class="branches">
+            <div class="branch warn"><span class="b-label">Nuovo</span><p>Nel preventivo va prevista la cauzione. L'importo si decide caso per caso.</p></div>
+            <div class="branch go"><span class="b-label">Già cliente</span><p>Di regola niente cauzione. Guarda lo storico: materiale usato l'ultima volta, problemi o note.</p></div>
+            <div class="branch warn"><span class="b-label">Da 150 cuffie in su</span><p>Chiedi sempre la cauzione, anche a chi è già cliente.</p></div>
+            <div class="branch go"><span class="b-label">Ente pubblico</span><p>Tendenzialmente evitiamo di chiedere la cauzione.</p></div>
+          </div>
+        </li>
+        <li class="node decision">
+          <span class="kind">Decisione</span>
+          <h3>Chi è il cliente?</h3>
+          <div class="branches">
+            <div class="branch"><span class="b-label">Persona fisica</span><p>Per documenti e fattura serviranno nome e cognome, email, telefono, codice fiscale e indirizzo di residenza.</p></div>
+            <div class="branch"><span class="b-label">Persona giuridica</span><p>Serviranno ragione sociale, partita IVA, codice fiscale, sede legale, PEC o codice SDI, e una persona di riferimento con i suoi contatti.</p><a class="goto" href="#ch3">vedi CH3</a></div>
+            <div class="branch warn"><span class="b-label">Ente pubblico</span><p>Split payment: lo segnali nell'offerta, nessun anticipo, l'ente paga su fattura. Serviranno codice univoco ufficio e CIG.</p><a class="goto" href="#ch4">vedi CH4</a></div>
+          </div>
+          <p class="small" style="margin-top:10px">Lo split payment vale per le pubbliche amministrazioni e le società da loro controllate. Nel dubbio chiedi all'ente se è soggetto: lo sa, e di solito lo scrive nell'ordine.</p>
+        </li>
+        <li class="node decision">
+          <span class="kind">Decisione</span>
+          <h3>Che formula di noleggio?</h3>
+          <div class="branches">
+            <div class="branch go"><span class="b-label">Evento singolo</span><p>Caso standard.</p></div>
+            <div class="branch warn"><span class="b-label">Ripetuti o prolungato</span><p>Le batterie durano 10–12 ore: aggiungi i sistemi di ricarica.</p></div>
+          </div>
+        </li>
+        <li class="node decision">
+          <span class="kind">Decisione</span>
+          <h3>Dove si svolge?</h3>
+          <div class="branches">
+            <div class="branch go"><span class="b-label">In Italia</span><p>Spedizione con corriere espresso, di solito DHL Express, isole comprese.</p></div>
+            <div class="branch go"><span class="b-label">Vicino a noi</span><p>Proponi sempre che il cliente ritiri e riconsegni lui il materiale in magazzino a Bareggio (MI), su appuntamento, dalle 10 alle 17.</p></div>
+            <div class="branch"><span class="b-label">Estero</span><p>Assegna la richiesta a Fabrizio, a meno che Roberto, Mattia o Emanuele non decidano di seguirla loro.</p></div>
+            <div class="branch warn"><span class="b-label">Svizzera</span><p>Chiedi sempre a Roberto, Mattia o Emanuele prima di fare qualsiasi cosa.</p></div>
+          </div>
+        </li>
+      </ol>
+      <aside class="side">
+        <div class="card">
+          <h3>Le sei risposte da annotare</h3>
+          <ol class="tight">
+            <li>Pertinente o no</li>
+            <li>Noleggio o acquisto</li>
+            <li>Data dell'evento e urgenza</li>
+            <li>Cliente nuovo o già acquisito</li>
+            <li>Persona fisica, giuridica o ente pubblico</li>
+            <li>Formula e luogo: vicino a noi, resto d'Italia, estero</li>
+          </ol>
+          <p class="small">Con queste sei risposte sai già quale strada prende la richiesta e cosa dovrai chiedere dopo.</p>
+        </div>
+        <div class="card">
+          <h3>Tempi promessi sul sito</h3>
+          <ul class="tight">
+            <li>Risposta entro 24 ore, o un giorno lavorativo</li>
+            <li>Eventi entro 48 ore: contatto per telefono o WhatsApp</li>
+            <li>Consigliamo di chiedere il preventivo 7–10 giorni prima</li>
+          </ul>
+        </div>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<!-- CH2 -->
+<section id="ch2" class="phase">
+  <div class="wrap">
+    <div class="phase-head"><span class="ch-tag">CH2</span><div><h2>Scelta del materiale</h2><p class="goal">Il tipo di evento decide tre cose: quanti canali servono, quale cuffia e quale trasmettitore. Scegli la tipologia per vedere il kit di partenza.</p></div></div>
+    <div class="rule"><strong>Regola base</strong><p>Serve un canale per ogni audio diverso che va in onda nello stesso momento. Tre DJ fanno 3 canali. Italiano, inglese e francese fanno 3 canali. Un trasmettitore per ogni canale.</p></div>
+    <div class="card" style="margin-bottom:20px;max-width:80ch">
+      <h3>Versioni delle cuffie e trasmettitori</h3>
+      <ul class="models">
+        <li><span class="model">SX 839 V2</span> a 3 canali. Trasmettitore fisso: <span class="model">TX-350 CH3</span>. Oppure <span class="model">TX-150 POR</span> (colonnina). Portatile: <span class="model">TX-330 MOBI CH3</span> oppure <span class="model">TX-450 MOBI CH3</span>, più compatto ma senza Bluetooth e con portata di circa 100 m.</li>
+        <li><span class="model">SX 839 V2 CH10</span> a 10 canali. Trasmettitore fisso: <span class="model">TX-700-CH10</span>, oppure <span class="model">TX-700-CH10 XLR</span> se il cliente ha bisogno dell'ingresso XLR. Portatile: <span class="model">TX-330 MOBI CH10</span></li>
+        <li><span class="model">SX 839 V2 CH60</span> a 60 canali. Trasmettitore fisso: <span class="model">TX-700 CH60 500 MHz</span> e <span class="model">TX-700 CH60 600 MHz</span>. I canali sono in blocchi da 10, uno per lettera: il 500 MHz copre tre lettere, il 600 MHz le altre tre. Non esiste un trasmettitore portatile. Per come suddividere i canali, chiedi a Roberto, Mattia o Emanuele.</li>
+        <li><span class="model">SX-553 Evo HiFi</span> a 5 canali. Trasmettitore fisso: <span class="model">TX-350 CH5</span>. Portatile: <span class="model">TX-400 MOBI CH5</span>, molto simile al TX-450: dagli un'occhiata dal vivo per capire com'è.</li>
+        <li><span class="model">SX 809 V3</span> le SX 809 sono di solito V3. Trasmettitore fisso: <span class="model">TX-500</span>. Portatile: <span class="model">TX-300 MOBI</span>. <strong>In dismissione:</strong> non venderle ai nuovi clienti e noleggiale solo se le altre cuffie non bastano.</li>
+        <li><span class="model">SX-707</span> a 3 canali. Portatile: <span class="model">TX-330 MOBI CH3</span>, consigliato, oppure <span class="model">TX-300 MOBI</span></li>
+        <li><span class="model">SX-809 PRG</span> fino a 45 canali, per le conferenze. Solo a noleggio, non si vendono. Trasmettitore fisso: <span class="model">TX-600 45CH</span> con il suo controller, nelle configurazioni A, B, C, D o E secondo come viene programmato. Per la configurazione chiedi a Roberto, Mattia o Emanuele.</li>
+        <li><span class="model">SX-809 V1</span> solo in casi specifici, per esempio quando il cliente ha trasmettitori molto vecchi. Prima di proporle chiedi conferma a Roberto o Simona. Trasmettitore fisso anche <span class="model">TX-100 POR</span> (colonnina), circa 100 m.</li>
+      </ul>
+      <p class="small">Abbina sempre il trasmettitore fisso alla versione delle cuffie: TX-350 CH3 con le SX 839 V2, TX-700-CH10 con le SX 839 V2 CH10, TX-350 CH5 con le SX-553 Evo HiFi, TX-500 con le SX 809 V3.</p>
+    </div>
+    <div class="chips" id="ev-chips" role="group" aria-label="Tipologia di evento"></div>
+    <div class="kit" id="ev-kit" aria-live="polite"></div>
+    <h3 class="sec-title" style="margin-top:36px">Compatibilità cuffie e trasmettitori</h3>
+    <p class="goal" style="margin-bottom:14px">Dalle tabelle del raccoglitore in magazzino. Prima di abbinare cuffie e trasmettitori di famiglie diverse, controlla qui.</p>
+    <div class="compat-notes">
+      <p><strong>3 canali:</strong> funziona quasi tutto con tutto. L'eccezione sono le SX-809 V3, che vanno solo con il TX-500 fisso e il TX-300 MOBI.</p>
+      <p><strong>10 canali:</strong> i trasmettitori INDA non funzionano con le cuffie GO ON. I trasmettitori GO ON funzionano con le cuffie INDA solo sui canali 1, 5, 6 e 10.</p>
+    </div>
+    <div class="compat-grid">
+      <figure class="compat"><figcaption>3 canali</figcaption><div class="compat-scroll"><table><thead><tr><th rowspan="2" scope="col">Trasmettitore</th><th colspan="4" class="fam">Cuffie GO ON</th><th colspan="3" class="fam">Cuffie INDA</th></tr><tr><th>809 V1</th><th>809 V3</th><th>808N</th><th>RX-705</th><th>839 V1</th><th>839 V2</th><th>RX-905</th></tr></thead><tbody><tr class="grp"><th colspan="8">Trasmettitori GO ON</th></tr><tr><th scope="row">TX-500 fisso</th><td class="yes" title="Compatibile">✓</td><td class="yes" title="Compatibile">✓</td><td class="yes" title="Compatibile">✓</td><td class="yes" title="Compatibile">✓</td><td class="yes" title="Compatibile">✓</td><td class="yes" title="Compatibile">✓</td><td class="yes" title="Compatibile">✓</td></tr><tr><th scope="row">TX-300 MOBI</th><td class="yes" title="Compatibile">✓</td><td class="yes" title="Compatibile">✓</td><td class="yes" title="Compatibile">✓</td><td class="yes" title="Compatibile">✓</td><td class="yes" title="Compatibile">✓</td><td class="yes" title="Compatibile">✓</td><td class="yes" title="Compatibile">✓</td></tr><tr><th scope="row">TX-100 POR (colonnina)</th><td class="yes" title="Compatibile">✓</td><td class="no" title="Non compatibile">✗</td><td class="yes" title="Compatibile">✓</td><td class="yes" title="Compatibile">✓</td><td class="yes" title="Compatibile">✓</td><td class="yes" title="Compatibile">✓</td><td class="yes" title="Compatibile">✓</td></tr><tr class="grp"><th colspan="8">Trasmettitori INDA</th></tr><tr><th scope="row">TX-350 BT</th><td class="yes" title="Compatibile">✓</td><td class="no" title="Non compatibile">✗</td><td class="yes" title="Compatibile">✓</td><td class="yes" title="Compatibile">✓</td><td class="yes" title="Compatibile">✓</td><td class="yes" title="Compatibile">✓</td><td class="yes" title="Compatibile">✓</td></tr><tr><th scope="row">TX-330 MOBI</th><td class="yes" title="Compatibile">✓</td><td class="no" title="Non compatibile">✗</td><td class="yes" title="Compatibile">✓</td><td class="yes" title="Compatibile">✓</td><td class="yes" title="Compatibile">✓</td><td class="yes" title="Compatibile">✓</td><td class="yes" title="Compatibile">✓</td></tr><tr><th scope="row">TX-150 POR (colonnina)</th><td class="yes" title="Compatibile">✓</td><td class="no" title="Non compatibile">✗</td><td class="yes" title="Compatibile">✓</td><td class="yes" title="Compatibile">✓</td><td class="yes" title="Compatibile">✓</td><td class="yes" title="Compatibile">✓</td><td class="yes" title="Compatibile">✓</td></tr><tr><th scope="row">TX-400 MOBI bodypack</th><td class="yes" title="Compatibile">✓</td><td class="no" title="Non compatibile">✗</td><td class="yes" title="Compatibile">✓</td><td class="yes" title="Compatibile">✓</td><td class="yes" title="Compatibile">✓</td><td class="yes" title="Compatibile">✓</td><td class="yes" title="Compatibile">✓</td></tr><tr><th scope="row">TX-450 MOBI bodypack</th><td class="yes" title="Compatibile">✓</td><td class="no" title="Non compatibile">✗</td><td class="yes" title="Compatibile">✓</td><td class="yes" title="Compatibile">✓</td><td class="yes" title="Compatibile">✓</td><td class="yes" title="Compatibile">✓</td><td class="yes" title="Compatibile">✓</td></tr></tbody></table></div></figure>
+      <figure class="compat"><figcaption>10 canali</figcaption><div class="compat-scroll"><table><thead><tr><th rowspan="2" scope="col">Trasmettitore</th><th colspan="4" class="fam">Cuffie GO ON</th><th colspan="2" class="fam">Cuffie INDA</th></tr><tr><th>809 CH10</th><th>610</th><th>858</th><th>RX-705 CH10</th><th>839 10CH</th><th>RX-905 CH10</th></tr></thead><tbody><tr class="grp"><th colspan="7">Trasmettitori GO ON</th></tr><tr><th scope="row">TX-300 fisso</th><td class="yes" title="Compatibile">✓</td><td class="yes" title="Compatibile">✓</td><td class="yes" title="Compatibile">✓</td><td class="yes" title="Compatibile">✓</td><td class="part">solo canali<br>1, 5, 6, 10</td><td class="part">solo canali<br>1, 5, 6, 10</td></tr><tr><th scope="row">TX-300 MOBI</th><td class="yes" title="Compatibile">✓</td><td class="yes" title="Compatibile">✓</td><td class="yes" title="Compatibile">✓</td><td class="yes" title="Compatibile">✓</td><td class="part">solo canali<br>1, 5, 6, 10</td><td class="part">solo canali<br>1, 5, 6, 10</td></tr><tr class="grp"><th colspan="7">Trasmettitori INDA</th></tr><tr><th scope="row">TX-700 BT</th><td class="no" title="Non compatibile">✗</td><td class="no" title="Non compatibile">✗</td><td class="no" title="Non compatibile">✗</td><td class="no" title="Non compatibile">✗</td><td class="yes" title="Compatibile">✓</td><td class="yes" title="Compatibile">✓</td></tr><tr><th scope="row">TX-330 MOBI</th><td class="no" title="Non compatibile">✗</td><td class="no" title="Non compatibile">✗</td><td class="no" title="Non compatibile">✗</td><td class="no" title="Non compatibile">✗</td><td class="yes" title="Compatibile">✓</td><td class="yes" title="Compatibile">✓</td></tr></tbody></table></div></figure>
+    </div>
+    <h3 class="sec-title" style="margin-top:36px">Vale per ogni evento</h3>
+    <div class="facts">
+      <div class="fact"><span class="label">Portata</span><span class="big">100–500 m</span><p>Fissi fino a 300–500 m in linea d'aria e in condizioni ottimali, tranne il TX-100 POR che arriva a circa 100 m. Portatili: circa 300 m il TX-330, circa 100 m il TX-450. Al chiuso o con ostacoli è meno: per aree grandi servono più trasmettitori o antenne.</p></div>
+      <div class="fact"><span class="label">Batterie</span><span class="big">10–12 h</span><p>Con una carica, a seconda del modello. Per noleggi di più giorni aggiungi i sistemi di ricarica.</p></div>
+      <div class="fact"><span class="label">Scorta</span><span class="big">2 + 1</span><p>Parti sempre da 2 cuffie e 1 trasmettitore di scorta, poi valuta se aggiungerne in base alla quantità.</p></div>
+      <div class="fact"><span class="label">Dubbi</span><span class="big">Chiedi</span><p>Se la configurazione non è chiara, senti i colleghi prima di inviare il preventivo. Eventi complessi: tecnico in loco.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- CH3 -->
+<section id="ch3" class="phase">
+  <div class="wrap">
+    <div class="phase-head"><span class="ch-tag">CH3</span><div><h2>Raccolta dati</h2><p class="goal">Prima del preventivo controlli di avere tutto. Se manca qualcosa chiedi solo quello, in un unico messaggio. Anche i dati del cliente per i documenti sono bloccanti. Solo il luogo di consegna si può definire dopo.</p></div></div>
+    <div class="phase-body">
+      <ol class="flow">
+        <li class="node action">
+          <span class="kind">Azione</span>
+          <h3>Confronta la richiesta con la lista dei dati per il preventivo</h3>
+          <p>Usa lo strumento qui accanto: spunta quello che hai già e ti dice cosa manca.</p>
+        </li>
+        <li class="node decision">
+          <span class="kind">Decisione</span>
+          <h3>Mancano dati per il preventivo?</h3>
+          <div class="branches">
+            <div class="branch go"><span class="b-label">No</span><p>Vai al preventivo.</p><a class="goto" href="#ch4">CH4</a></div>
+            <div class="branch warn"><span class="b-label">Sì</span><p>Copia il messaggio generato e invialo. Se l'evento è entro 48 ore, telefona.</p></div>
+          </div>
+        </li>
+        <li class="node decision">
+          <span class="kind">Decisione</span>
+          <h3>Il cliente risponde?</h3>
+          <div class="branches">
+            <div class="branch go"><span class="b-label">Sì</span><p>Ricontrolla la lista. Se è completa, passa al preventivo.</p></div>
+            <div class="branch stop"><span class="b-label">No</span><p>Sollecito dopo 2 giorni lavorativi. Se ancora niente, archivia.</p></div>
+          </div>
+        </li>
+        <li class="node action">
+          <span class="kind">Azione</span>
+          <h3>Luogo di consegna</h3>
+          <p>È l'unico dato che puoi chiedere dopo, insieme all'invio del preventivo: lo strumento prepara anche quel messaggio quando il resto è completo.</p>
+        </li>
+      </ol>
+      <aside class="side">
+        <div class="tool" id="dati-tool">
+          <div class="tool-head">
+            <h3>Verifica dati</h3>
+            <button class="btn ghost" type="button" id="dati-reset">Nuova richiesta</button>
+          </div>
+          <p class="tool-note">Le spunte iniziali sono un esempio. Premi "Nuova richiesta" per partire da zero.</p>
+          <div class="seg" role="radiogroup" aria-label="Tipo di cliente">
+            <label><input type="radio" name="dati-tipo" id="dati-tipo-g" value="giuridica" checked><span>Persona giuridica</span></label>
+            <label><input type="radio" name="dati-tipo" id="dati-tipo-f" value="fisica"><span>Persona fisica</span></label>
+            <label><input type="radio" name="dati-tipo" id="dati-tipo-p" value="pubblico"><span>Ente pubblico</span></label>
+          </div>
+          <div class="group"><h4>Per il preventivo <small>bloccanti, compresi i dati del cliente</small></h4><div class="checks" id="dati-a"></div></div>
+          <div class="group"><h4>Per la consegna <small>puoi chiederlo dopo</small></h4><div class="checks" id="dati-b"></div></div>
+          <div class="status" id="dati-status" role="status"></div>
+          <div id="dati-msg-wrap" class="field-wrap" style="display:grid;gap:12px">
+            <div class="field"><label for="dati-nome">Nome del cliente (per il saluto)</label><input id="dati-nome" type="text" autocomplete="off" placeholder="es. dott.ssa Bianchi"></div>
+            <div class="field"><label for="dati-msg">Messaggio da inviare</label><textarea id="dati-msg" readonly></textarea></div>
+            <div class="row"><button class="btn" type="button" id="dati-copy">Copia messaggio</button><span class="copied" id="dati-copied" aria-live="polite"></span></div>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<!-- CH4 -->
+<section id="ch4" class="phase">
+  <div class="wrap">
+    <div class="phase-head"><span class="ch-tag">CH4</span><div><h2>Definizione del preventivo</h2><p class="goal">Prepari l'offerta solo quando i dati per il preventivo sono completi e il materiale è disponibile. Il prezzo dipende da numero di cuffie, durata e destinazione.</p></div></div>
+    <div class="phase-body" style="grid-template-columns:minmax(0,1fr);max-width:820px">
+      <ol class="flow">
+        <li class="node decision">
+          <span class="kind">Decisione</span>
+          <h3>Il materiale è disponibile per tutto il periodo?</h3>
+          <p class="small">Chiedilo sempre prima ai colleghi. Il periodo va dalla consegna (giorno lavorativo prima dell'evento) al ritiro (giorno lavorativo dopo).</p>
+          <div class="branches">
+            <div class="branch warn"><span class="b-label">No</span><p>Proponi un'alternativa compatibile, come un altro modello o una quantità diversa, oppure avvisa subito il cliente.</p></div>
+            <div class="branch go"><span class="b-label">Sì</span><p>Prosegui. Non serve bloccare il materiale prima della firma.</p></div>
+          </div>
+        </li>
+        <li class="node action">
+          <span class="kind">Azione</span>
+          <h3>Prepara il preventivo con il riferimento SISY</h3>
+          <p>Ogni offerta ha un riferimento nel formato <span class="model">SISY-XXXXX</span>: è lo stesso che il cliente scriverà nella causale del bonifico.</p>
+          <p>Ente pubblico: segna nell'offerta che si applica lo split payment. Niente anticipo: l'ente paga su fattura.</p>
+          <p>Per la mail che accompagna il PDF usa lo strumento «Mail offerta» qui sotto.</p>
+        </li>
+        <li class="node decision">
+          <span class="kind">Decisione</span>
+          <h3>Serve un via libera interno?</h3>
+          <div class="branches">
+            <div class="branch warn"><span class="b-label">Sì</span><p>Sconti, configurazioni fuori standard o importi alti: fallo vedere ai colleghi prima dell'invio.</p></div>
+            <div class="branch go"><span class="b-label">No</span><p>Invia.</p></div>
+          </div>
+        </li>
+        <li class="node decision">
+          <span class="kind">Decisione</span>
+          <h3>Cosa risponde il cliente?</h3>
+          <div class="branches">
+            <div class="branch go"><span class="b-label">Accetta</span><p>Per un noleggio il cliente sottoscrive dal portale con il bottone «Conferma ordine» nel PDF del preventivo. Per un acquisto si passa al pagamento.</p><a class="goto" href="#ch5">CH5</a></div>
+            <div class="branch"><span class="b-label">Chiede modifiche</span><p>Fai una nuova versione dello stesso preventivo. Se cambiano materiale o date, ricontrolla la disponibilità.</p></div>
+            <div class="branch warn"><span class="b-label">Chiede uno sconto</span><p>Non promettere nulla: senti prima i colleghi.</p></div>
+            <div class="branch stop"><span class="b-label">Rifiuta</span><p>Ringrazia e ribadisci che restiamo a disposizione, poi chiudi come persa.</p></div>
+            <div class="branch stop"><span class="b-label">Non risponde</span><p>Sollecito dopo 3 giorni lavorativi. Se l'evento è vicino, telefona.</p></div>
+          </div>
+        </li>
+      </ol>
+    </div>
+    <div class="tool" id="mail-tool" style="margin-top:28px;max-width:820px">
+      <div class="tool-head">
+        <h3>Mail offerta</h3>
+        <button class="btn ghost" type="button" id="mail-reset">Azzera</button>
+      </div>
+      <p class="tool-note">Scegli cuffie e trasmettitore e la mail si compone da sola. Copiala, incollala nel programma di posta e allega il PDF del preventivo. La firma la aggiunge il programma di posta.</p>
+      <div class="mail-form">
+        <div class="field" style="grid-column:1/-1"><label for="mail-origine">Da dove è arrivata la richiesta</label><select id="mail-origine">
+          <option value="email">Email</option>
+          <option value="form">Modulo del sito</option>
+          <option value="telefono">Telefonata</option>
+          <option value="whatsapp">WhatsApp</option>
+          <option value="cliente">Cliente che torna da noi</option>
+        </select></div>
+        <div class="field"><label for="mail-cuffie">Cuffie</label><select id="mail-cuffie"></select></div>
+        <div class="field"><label for="mail-tx">Trasmettitore</label><select id="mail-tx"></select></div>
+        <div class="field"><label for="mail-raggio">Raggio d'azione (metri)</label><input id="mail-raggio" type="number" min="0" step="10" placeholder="Se non lo sai, lascia vuoto"></div>
+        <div class="field"><label for="mail-nome">Nome per la firma</label><input id="mail-nome" type="text" autocomplete="off" placeholder="Il tuo nome"></div>
+      </div>
+      <div><span class="label">Anteprima</span><div class="mail-preview" id="mail-preview"></div></div>
+      <div class="row"><button class="btn" type="button" id="mail-copy">Copia mail</button><button class="btn ghost" type="button" id="mail-copy-html">Copia HTML</button><span class="copied" id="mail-copied" aria-live="polite"></span></div>
+      <details class="mail-code"><summary>Codice HTML</summary><textarea id="mail-html" readonly aria-label="Codice HTML della mail"></textarea></details>
+    </div>
+  </div>
+</section>
+
+<!-- CH5 -->
+<section id="ch5" class="phase">
+  <div class="wrap">
+    <div class="phase-head"><span class="ch-tag">CH5</span><div><h2>Contratto e bonifico</h2><p class="goal">Un noleggio è confermato quando il cliente ha sottoscritto dal portale e il pagamento è davvero arrivato. Un acquisto non ha contratto: serve il pagamento anticipato del 100%. Una contabile da sola non basta. Gli enti pubblici fanno eccezione: niente anticipo, pagano su fattura in split payment.</p></div></div>
+    <div class="phase-body" style="grid-template-columns:minmax(0,1fr);max-width:820px">
+      <ol class="flow">
+        <li class="node decision">
+          <span class="kind">Decisione</span>
+          <h3>Noleggio o acquisto?</h3>
+          <div class="branches">
+            <div class="branch"><span class="b-label">Noleggio</span><p>Non serve inviare il contratto. Nel PDF del preventivo c'è il bottone «Conferma ordine», che porta il cliente al portale per la sottoscrizione.</p></div>
+            <div class="branch"><span class="b-label">Acquisto</span><p>Nessun contratto da firmare. Chiedi il pagamento anticipato del 100% e passa al controllo della contabile.</p></div>
+          </div>
+        </li>
+        <li class="node decision">
+          <span class="kind">Decisione</span>
+          <h3>Il cliente è un ente pubblico?</h3>
+          <div class="branches">
+            <div class="branch warn"><span class="b-label">Sì</span><p>Niente bonifico anticipato. Prima di confermare ti serve l'ordine scritto dell'ente con il CIG. Passa all'amministrazione codice univoco ufficio e CIG: la fattura va emessa in split payment e l'ente paga su fattura.</p><a class="goto" href="#confermato">Confermato</a></div>
+            <div class="branch go"><span class="b-label">No</span><p>Controlla la contabile.</p></div>
+          </div>
+          <p class="small" style="margin-top:10px">Con lo split payment l'ente ci versa solo l'imponibile e paga l'IVA direttamente allo Stato. Il pagamento che arriva è quindi senza IVA.</p>
+        </li>
+        <li class="node decision">
+          <span class="kind">Decisione</span>
+          <h3>La contabile del bonifico è corretta?</h3>
+          <p class="small">Per un acquisto l'importo è sempre il 100% dell'ordine: un pagamento parziale non basta.</p>
+          <div class="branches">
+            <div class="branch warn"><span class="b-label">Importo inferiore</span><p>Chiedi la differenza prima di confermare.</p></div>
+            <div class="branch warn"><span class="b-label">Importo superiore</span><p>Segnalalo all'amministrazione.</p></div>
+            <div class="branch"><span class="b-label">Causale senza SISY</span><p>Collega tu il pagamento all'offerta e annotalo.</p></div>
+            <div class="branch warn"><span class="b-label">Paga un altro soggetto</span><p>Prendine nota tu, non serve segnalarlo.</p></div>
+            <div class="branch go"><span class="b-label">Tutto corretto</span><p>Prosegui.</p></div>
+          </div>
+        </li>
+        <li class="node decision">
+          <span class="kind">Decisione</span>
+          <h3>L'accredito risulta sul conto?</h3>
+          <p class="small">La contabile dimostra che il cliente ha dato l'ordine, non che i soldi sono arrivati. Per il noleggio si paga il saldo prima della spedizione.</p>
+          <div class="branches">
+            <div class="branch warn"><span class="b-label">Non ancora</span><p>Un bonifico ordinario impiega circa un giorno lavorativo. Se i tempi sono stretti, chiedi un bonifico istantaneo. Il materiale parte solo dopo l'accredito, sia per l'acquisto sia per il noleggio.</p></div>
+            <div class="branch go"><span class="b-label">Sì</span><p>Confermato.</p></div>
+          </div>
+        </li>
+        <li class="node end" id="confermato">
+          <span class="kind">Punto di arrivo</span>
+          <h3>Noleggio o ordine confermato</h3>
+          <ol class="steps">
+            <li>Invia la conferma al cliente.</li>
+            <li>Passa l'ordine al magazzino per la spedizione con DHL Express. Per un noleggio la consegna è il giorno lavorativo prima dell'evento. Il cliente riceve il tracking via email o SMS.</li>
+            <li>Ricorda al cliente: danni visibili alla consegna vanno segnalati al corriere accettando "con riserva"; differenze con il DDT entro 12 ore.</li>
+            <li>Solo noleggio: ritiro il giorno lavorativo dopo l'evento, con le etichette di reso inviate via email.</li>
+            <li>Solo noleggio: la cauzione si restituisce entro 30 giorni lavorativi da quando il cliente compila il form.</li>
+          </ol>
+        </li>
+      </ol>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer class="wrap foot">
+  <p>Fonti: silentsystem.it, pagine Preventivo, Domande frequenti e Prodotti; per gli enti pubblici art. 17-ter DPR 633/1972 (split payment, prorogato fino al 30 giugno 2029) e art. 25 DL 66/2014 (CIG in fattura). Bozza del 20 ottobre 2026.</p>
+</footer>
+
+<script>
+(function(){
+  /* ---------- Navigazione: evidenzia la fase visibile ---------- */
+  var links = Array.prototype.slice.call(document.querySelectorAll('.nav a'));
+  var navInner = document.querySelector('.nav-inner');
+  var byId = {};
+  links.forEach(function(a){ byId[a.getAttribute('href').slice(1)] = a; });
+  if ('IntersectionObserver' in window){
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if (!e.isIntersecting) return;
+        var a = byId[e.target.id];
+        if (!a) return;
+        links.forEach(function(l){ l.classList.remove('active'); });
+        a.classList.add('active');
+        if (navInner.scrollWidth > navInner.clientWidth){
+          navInner.scrollTo({ left: Math.max(0, a.offsetLeft - 24), behavior: 'smooth' });
+        }
+      });
+    }, { rootMargin: '-35% 0px -60% 0px' });
+    Object.keys(byId).forEach(function(id){ var s = document.getElementById(id); if (s) io.observe(s); });
+  }
+
+  /* ---------- CH2: kit per tipologia di evento ---------- */
+  var EVENTS = [
+    { id:'disco', portata:'Trasmettitori fissi: fino a 300–500 m in linea d\'aria in condizioni ottimali. Al chiuso o con ostacoli è meno.', name:'Silent disco e feste',
+      ex:'Feste, festival, locali con limiti di volume, matrimoni, feste per bambini',
+      canali:'Uno per DJ o playlist, di solito 3.',
+      assist:'Di solito in autonomia, con guida d\'uso e supporto telefonico.',
+      cuffie:[['SX 839 V2','3 canali, LED colorati'],['SX 809 V3','LED colorati. In dismissione: solo se le altre cuffie non bastano'],['SX-553 Evo HiFi','5 canali']],
+      tx:[['TX-350 CH3','fisso, per le SX 839 V2: uno per canale'],['TX-500','fisso, per le SX 809 V3: uno per canale. Con le V3 vanno solo TX-500 e TX-300 MOBI'],['TX-350 CH5','fisso, per le SX-553 Evo HiFi: uno per canale']],
+      domande:['Quanti DJ suonano in contemporanea?','Da dove arriva l\'audio di ogni DJ: mixer, computer?','Al chiuso o all\'aperto? Quanto è grande l\'area?'],
+      extra:'Il LED della cuffia prende il colore del canale: si vede a colpo d\'occhio chi ascolta quale DJ.' },
+    { id:'conf', portata:'Trasmettitori fissi: fino a 300–500 m in linea d\'aria in condizioni ottimali. Al chiuso o con ostacoli è meno. Per più sale lontane tra loro servono più trasmettitori o antenne.', name:'Conferenze e traduzione simultanea',
+      ex:'Congressi, convention, assemblee, eventi su più sale',
+      canali:'Uno per lingua (compresa l\'originale, se serve) o per sala.',
+      assist:'Tecnico in loco consigliato, dalle prove alla chiusura. Pianificazione delle frequenze.',
+      cuffie:[['SX 839 V2 CH60','fino a 60 canali'],['SX 839 V2 CH10','10 canali'],['SX-809 PRG','fino a 45 canali, solo a noleggio'],['SX-858 / SX-610','10 canali, per configurazioni più piccole']],
+      tx:[['TX-700-CH10','fisso, per le SX 839 V2 CH10: uno per lingua o per sala'],['TX-700-CH10 XLR','come sopra, con ingresso XLR se serve al cliente'],['TX-600 45CH','fisso, con controller, per le SX-809 PRG: configurazioni A–E secondo la programmazione'],['TX-300 fisso 10CH','per le SX-858 e SX-610'],['TX-700 CH60 500 / 600 MHz','fisso, per le SX 839 V2 CH60: la suddivisione dei canali la decidono Roberto, Mattia o Emanuele']],
+      acc:'Microfoni e antenne.',
+      domande:['Quante lingue? Interpreti e cabine li fornisce il cliente?','Quante sale lavorano in parallelo?','Il banco regia o degli interpreti esce in XLR?','Quanti giorni dura? Servono i sistemi di ricarica?'],
+      extra:'Con molti partecipanti proponi Headphone Manager: distribuzione e ritiro delle cuffie con NFC.' },
+    { id:'live', portata:'Trasmettitori fissi: fino a 300–500 m in linea d\'aria in condizioni ottimali. Al chiuso o con ostacoli è meno.', name:'Concerti e riunioni',
+      ex:'Mix di sala in cuffia, concerti a tarda notte, meeting, ascolti in studio',
+      canali:'Uno per ogni mix o sala.',
+      assist:'Dipende dalla complessità. Per i concerti chiedi se c\'è un fonico.',
+      cuffie:[['SX-553 Evo HiFi','5 canali'],['SX-858 / SX-610','10 canali'],['SX-808','3 canali']],
+      tx:[['TX-350 CH5','fisso, per le SX-553 Evo HiFi, dal mixer del fonico'],['TX-400 MOBI CH5','portatile, per le SX-553 Evo HiFi'],['TX-500','fisso, per le SX-808, dal mixer del fonico'],['TX-300 fisso 10CH','per le SX-858 e SX-610, dal mixer del fonico'],['TX-300 MOBI 10CH','portatile, per le SX-858 e SX-610']],
+      acc:'Microfoni, se qualcuno parla al pubblico.',
+      domande:['Il fonico può darci un\'uscita dedicata dal mixer?','Quanti mix diversi servono?','Serve un microfono per chi parla?'] },
+    { id:'fit', portata:'Portatili: circa 300 m con il TX-330 MOBI, circa 100 m con il TX-450, più compatto. All\'aperto e su aree grandi scegli il TX-330.', name:'Fitness e yoga',
+      ex:'Lezioni di gruppo, spinning, yoga in spiaggia, al parco o in terrazza',
+      canali:'Di solito 1 (voce dell\'istruttore e musica). Uno in più per ogni lezione in contemporanea.',
+      assist:'In autonomia.',
+      cuffie:[['SX-707','3 canali, pensata per fitness, yoga e passeggiate'],['SX 839 V2','se servono i LED colorati']],
+      tx:[['TX-330 MOBI CH3','portatile, consigliato con le SX-707, va anche con le SX 839 V2'],['TX-300 MOBI','portatile, va con le SX-707 ma è meglio il TX-330'],['TX-450 MOBI CH3','portatile, per le SX 839 V2: più compatto, senza Bluetooth']],
+      acc:'Microfono per l\'istruttore.',
+      domande:['L\'istruttore parla mentre va la musica?','All\'aperto? Quanta distanza tra istruttore e partecipanti?','Quante lezioni in contemporanea?'] },
+    { id:'walk', portata:'Portatili: circa 300 m con il TX-330 MOBI, circa 100 m con il TX-450, più compatto. Il gruppo deve restare entro questa distanza dalla guida.', name:'Visite guidate e silent walk',
+      ex:'Tour con narrazione, nordic walking, camminate di gruppo',
+      canali:'Uno per ogni guida o gruppo che si muove in contemporanea.',
+      assist:'In autonomia.',
+      cuffie:[['SX-707','3 canali, adatta a camminare'],['SX 839 V2','3 canali, da usare con il TX-450']],
+      tx:[['TX-330 MOBI CH3','portatile, consigliato con le SX-707'],['TX-450 MOBI CH3','portatile, per le SX 839 V2: compatto e comodo per la guida, senza Bluetooth, circa 100 m'],['TX-300 MOBI','portatile, va con le SX-707 ma è meglio il TX-330']],
+      acc:'Microfono per la guida.',
+      domande:['Quanti gruppi girano in contemporanea?','Quanto dura il percorso? Le batterie reggono 10–12 ore.','La guida parla soltanto o mette anche musica?'] },
+    { id:'teatro', portata:'Trasmettitori fissi: fino a 300–500 m in linea d\'aria in condizioni ottimali. Al chiuso o con ostacoli è meno.', name:'Teatro, musei, cinema, scuole',
+      ex:'Teatro immersivo, installazioni, cinema all\'aperto, esami di lingua',
+      canali:'Uno per traccia, lingua o percorso. Per gli esami di lingua ne basta 1.',
+      assist:'Dipende: per spettacoli e cinema chiedi chi gestisce la regia.',
+      cuffie:[['SX-553 Evo HiFi','5 canali'],['SX 839 V2','3 canali: suggerisci sempre di spegnere i LED'],['SX-808','3 canali'],['SX-858 / SX-610','10 canali, se le tracce sono di più']],
+      tx:[['TX-350 CH5','fisso, per le SX-553 Evo HiFi, dalla regia o dal proiettore'],['TX-350 CH3','fisso, per le SX 839 V2, dalla regia o dal proiettore'],['TX-500','fisso, per le SX-808, dalla regia o dal proiettore'],['TX-300 fisso 10CH','per le SX-858 e SX-610']],
+      acc:'Antenne per coprire spazi ampi.',
+      extra:'Con le SX 839 V2 a teatro o al museo, suggerisci sempre al cliente di spegnere i LED.',
+      domande:['Quante tracce o lingue diverse?','Da dove esce l\'audio: regia, proiettore, computer?','All\'aperto ci sono residenti vicino?'] }
+  ];
+  var chipsEl = document.getElementById('ev-chips');
+  var kitEl = document.getElementById('ev-kit');
+  function models(arr){
+    return arr.map(function(m){ return '<li><span class="model">' + m[0] + '</span> ' + m[1] + '</li>'; }).join('');
+  }
+  function renderKit(id){
+    var ev = EVENTS.filter(function(e){ return e.id === id; })[0];
+    Array.prototype.forEach.call(chipsEl.children, function(b){ b.setAttribute('aria-pressed', String(b.dataset.id === id)); });
+    kitEl.innerHTML =
+      '<div class="kit-head"><h3>' + ev.name + '</h3><p>' + ev.ex + '</p></div>' +
+      '<div class="kit-grid">' +
+        '<div class="kit-cell"><span class="label">Canali</span><p>' + ev.canali + '</p></div>' +
+        '<div class="kit-cell"><span class="label">Assistenza</span><p>' + ev.assist + '</p></div>' +
+        '<div class="kit-cell"><span class="label">Cuffie</span><ul class="models">' + models(ev.cuffie) + '</ul></div>' +
+        '<div class="kit-cell"><span class="label">Trasmettitori</span><ul class="models">' + models(ev.tx) + '</ul></div>' +
+        '<div class="kit-cell' + (ev.acc ? '' : ' wide') + '"><span class="label">Portata</span><p>' + ev.portata + '</p></div>' +
+        (ev.acc ? '<div class="kit-cell"><span class="label">Accessori</span><p>' + ev.acc + '</p></div>' : '') +
+        '<div class="kit-cell wide"><span class="label">Domande da fare al cliente</span><ul class="tight">' + ev.domande.map(function(d){ return '<li>' + d + '</li>'; }).join('') + '</ul></div>' +
+        (ev.extra ? '<div class="kit-cell wide note"><p>' + ev.extra + '</p></div>' : '') +
+      '</div>';
+  }
+  EVENTS.forEach(function(ev){
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'chip'; b.dataset.id = ev.id; b.textContent = ev.name;
+    b.addEventListener('click', function(){ renderKit(ev.id); });
+    chipsEl.appendChild(b);
+  });
+  renderKit('disco');
+
+  /* ---------- CH3: verifica dati e messaggio ---------- */
+  var A = [
+    { id:'tipo', label:'Tipo di evento', ask:'Che tipo di evento è (ad esempio silent disco, congresso, visita guidata)?' },
+    { id:'date', label:'Data o date dell\'evento', ask:'In che data, o date, si svolge l\'evento?' },
+    { id:'luogo', label:'Luogo: città e struttura', ask:'Dove si svolge l\'evento (città e struttura)?' },
+    { id:'persone', label:'Numero di cuffie', ask:'Quante persone useranno le cuffie? Va bene anche un numero indicativo.' },
+    { id:'canali', label:'Numero di canali: DJ, lingue, sale', ask:'Quanti audio diversi servono in contemporanea (ad esempio quanti DJ, quante lingue o quante sale)?' },
+    { id:'sorgenti', label:'Da dove arriva l\'audio', ask:'Da dove arriva l\'audio: mixer del DJ o del fonico, microfono di un relatore o di una guida, interpreti?' },
+    { id:'assistenza', label:'Assistenza: in autonomia o tecnico in loco', ask:'Preferite gestire il sistema in autonomia, con guida d\'uso e supporto telefonico, oppure con un nostro tecnico sul posto?' }
+  ];
+  var B = {
+    giuridica: [
+      { id:'ragione', label:'Ragione sociale e sede legale', ask:'Ragione sociale e indirizzo della sede legale' },
+      { id:'piva', label:'Partita IVA e codice fiscale', ask:'Partita IVA e codice fiscale' },
+      { id:'sdi', label:'Codice SDI o PEC', ask:'Codice SDI o indirizzo PEC per la fattura elettronica' },
+      { id:'rif', label:'Persona di riferimento con email e telefono', ask:'Nome della persona di riferimento, con email e telefono' }
+    ],
+    fisica: [
+      { id:'nome', label:'Nome e cognome', ask:'Nome e cognome dell\'intestatario' },
+      { id:'contatti', label:'Email e telefono', ask:'Email e numero di telefono' },
+      { id:'cf', label:'Codice fiscale', ask:'Codice fiscale' },
+      { id:'residenza', label:'Indirizzo di residenza', ask:'Indirizzo di residenza' }
+    ],
+    pubblico: [
+      { id:'ente', label:'Denominazione e codice fiscale dell\'ente', ask:'Denominazione esatta e codice fiscale dell\'ente' },
+      { id:'cuu', label:'Codice univoco ufficio', ask:'Codice univoco ufficio (6 caratteri) per la fattura elettronica' },
+      { id:'cig', label:'CIG ed eventuale CUP', ask:'CIG ed eventuale CUP da riportare in fattura' },
+      { id:'split', label:'Conferma split payment', ask:'Conferma che l\'ente è soggetto a split payment' }
+    ],
+    comuni: [
+      { id:'consegna', label:'Indirizzo di consegna e ritiro', ask:'Indirizzo esatto di consegna e ritiro del materiale' },
+      { id:'referente', label:'Referente sul posto con telefono', ask:'Nome e telefono di chi riceverà il materiale sul posto' }
+    ]
+  };
+  var EXAMPLE = ['tipo','date','luogo','persone'];
+  var checked = {};
+  EXAMPLE.forEach(function(k){ checked[k] = true; });
+  var tipo = 'giuridica';
+
+  var aEl = document.getElementById('dati-a');
+  var bEl = document.getElementById('dati-b');
+  var statusEl = document.getElementById('dati-status');
+  var nomeEl = document.getElementById('dati-nome');
+  var msgEl = document.getElementById('dati-msg');
+  var msgWrap = document.getElementById('dati-msg-wrap');
+  var copiedEl = document.getElementById('dati-copied');
+
+  function aList(){ return B[tipo].concat(A); }
+  function bList(){ return B.comuni; }
+  function renderChecks(el, items){
+    el.innerHTML = '';
+    items.forEach(function(it){
+      var lab = document.createElement('label');
+      lab.className = 'check';
+      var inp = document.createElement('input');
+      inp.type = 'checkbox'; inp.id = 'dati-' + it.id; inp.checked = !!checked[it.id];
+      inp.addEventListener('change', function(){ checked[it.id] = inp.checked; update(); });
+      var sp = document.createElement('span'); sp.textContent = it.label;
+      lab.appendChild(inp); lab.appendChild(sp);
+      el.appendChild(lab);
+    });
+  }
+  function update(){
+    var missA = aList().filter(function(i){ return !checked[i.id]; });
+    var missB = bList().filter(function(i){ return !checked[i.id]; });
+    var name = nomeEl.value.trim();
+    var saluto = name ? 'Buongiorno ' + name + ',' : 'Buongiorno,';
+    var lines;
+    if (missA.length){
+      statusEl.className = 'status warn';
+      statusEl.innerHTML = '<b>' + (missA.length === 1 ? 'Manca 1 dato' : 'Mancano ' + missA.length + ' dati') + ' per il preventivo</b><span>Invia il messaggio qui sotto. Il luogo di consegna puoi chiederlo con l\'offerta.</span>';
+      lines = [saluto, '', 'grazie per averci contattato. Per prepararle un preventivo preciso ci servono ancora alcune informazioni:', ''];
+      missA.forEach(function(i){ lines.push('- ' + i.ask); });
+      lines.push('', 'Appena le riceviamo le inviamo l\'offerta entro 24 ore.', '', 'Un cordiale saluto,', 'Silentsystem');
+      msgWrap.hidden = false;
+    } else if (missB.length){
+      statusEl.className = 'status';
+      statusEl.innerHTML = '<b>Puoi fare il preventivo</b><span>' + (missB.length === 1 ? 'Manca 1 dato' : 'Mancano ' + missB.length + ' dati') + ' per la consegna: chiedili insieme all\'offerta.</span>';
+      lines = [saluto, '', 'in allegato trova il preventivo richiesto. Se desidera procedere, per organizzare la consegna ci servono anche:', ''];
+      missB.forEach(function(i){ lines.push('- ' + i.ask); });
+      lines.push('', 'Restiamo a disposizione per qualsiasi domanda.', '', 'Un cordiale saluto,', 'Silentsystem');
+      msgWrap.hidden = false;
+    } else {
+      statusEl.className = 'status ok';
+      statusEl.innerHTML = '<b>Dati completi</b><span>Puoi preparare il preventivo.</span>';
+      lines = [];
+      msgWrap.hidden = true;
+    }
+    msgEl.value = lines.join('\n');
+  }
+  function renderAll(){ renderChecks(aEl, aList()); renderChecks(bEl, bList()); update(); }
+
+  document.querySelectorAll('input[name="dati-tipo"]').forEach(function(r){
+    r.addEventListener('change', function(){ if (r.checked){ tipo = r.value; renderChecks(aEl, aList()); update(); } });
+  });
+  nomeEl.addEventListener('input', update);
+  document.getElementById('dati-reset').addEventListener('click', function(){
+    checked = {}; nomeEl.value = ''; copiedEl.textContent = '';
+    renderAll();
+  });
+  document.getElementById('dati-copy').addEventListener('click', function(){
+    var text = msgEl.value;
+    function fallback(){ msgEl.focus(); msgEl.select(); copiedEl.textContent = 'Testo selezionato: premi Cmd+C o Ctrl+C'; }
+    function done(){ copiedEl.textContent = 'Copiato'; setTimeout(function(){ copiedEl.textContent = ''; }, 2000); }
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(text).then(done, fallback); }
+      else { fallback(); }
+    } catch (e){ fallback(); }
+  });
+  renderAll();
+
+
+  /* ---------- CH4: mail offerta ---------- */
+  var ALLTX = [
+    ['TX-350 CH3',500],['TX-350 CH5',null],['TX-350 CH5 BT',null],['TX-350 CH3 per Hylis',null],
+    ['TX-150 POR',null],['TX-100 POR',100],
+    ['TX-330 MOBI CH3',300],['TX-330 MOBI CH3 per Hylis',300],['TX-330 MOBI CH10',300],
+    ['TX-450 MOBI CH3',100],['TX-400 MOBI CH3',null],['TX-400 MOBI CH5',null],
+    ['TX-500',null],['TX-300 MOBI',null],['TX-300 fisso 10CH',null],['TX-300 MOBI 10CH',null],
+    ['TX-700-CH10',null],['TX-700-CH10 XLR',null],['TX-700 CH60 500 MHz',null],['TX-700 CH60 600 MHz',null],
+    ['TX-600 45CH',null]
+  ];
+  var MAIL = [
+    { c:'SX 839 V2 HiFi ®', tx:['TX-350 CH3','TX-150 POR','TX-330 MOBI CH3','TX-450 MOBI CH3','TX-400 MOBI CH3'] },
+    { c:'SX 839 V2 CH10', tx:['TX-700-CH10','TX-700-CH10 XLR','TX-330 MOBI CH10'] },
+    { c:'SX 839 V2 CH60', tx:['TX-700 CH60 500 MHz','TX-700 CH60 600 MHz'] },
+    { c:'SX-553 Evo HiFi', tx:['TX-350 CH5','TX-350 CH5 BT','TX-400 MOBI CH5'] },
+    { c:'SX-809 PRG', tx:['TX-600 45CH'] },
+    { c:'SX-707', tx:['TX-330 MOBI CH3','TX-300 MOBI'] },
+    { c:'SX-808', tx:['TX-500','TX-300 MOBI','TX-100 POR'] },
+    { c:'SX-858', tx:['TX-300 fisso 10CH','TX-300 MOBI 10CH'] },
+    { c:'SX-610', tx:['TX-300 fisso 10CH','TX-300 MOBI 10CH'] },
+    { c:'SX 809 V3', tx:['TX-500','TX-300 MOBI'] }
+  ];
+  var mC = document.getElementById('mail-cuffie'), mT = document.getElementById('mail-tx');
+  var ORIGINI = {
+    email: 'facendo seguito alla comunicazione ricevuta invio in allegato la nostra migliore offerta per i servizi richiesti.',
+    form: 'facendo seguito alla richiesta inviata tramite il modulo del nostro sito, invio in allegato la nostra migliore offerta per i servizi richiesti.',
+    telefono: 'facendo seguito alla telefonata intercorsa, invio in allegato la nostra migliore offerta per i servizi richiesti.',
+    whatsapp: 'facendo seguito ai messaggi scambiati su WhatsApp, invio in allegato la nostra migliore offerta per i servizi richiesti.',
+    cliente: 'grazie per averci scelto di nuovo. Facendo seguito alla Sua richiesta, invio in allegato la nostra migliore offerta per i servizi richiesti.'
+  };
+  var mO = document.getElementById('mail-origine');
+  var mR = document.getElementById('mail-raggio'), mN = document.getElementById('mail-nome');
+  var mP = document.getElementById('mail-preview'), mH = document.getElementById('mail-html');
+  var mMsg = document.getElementById('mail-copied');
+  function esc(t){ return String(t).replace(/[&<>"]/g, function(ch){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]; }); }
+  MAIL.forEach(function(m, i){ var o = document.createElement('option'); o.value = i; o.textContent = m.c; mC.appendChild(o); });
+  function txRange(name){ var t = ALLTX.filter(function(x){ return x[0] === name; })[0]; return t ? t[1] : null; }
+  function fillTx(){
+    var m = MAIL[mC.value]; mT.innerHTML = '';
+    function group(label, names){
+      var g = document.createElement('optgroup'); g.label = label;
+      names.forEach(function(n){ var o = document.createElement('option'); o.value = n; o.textContent = n; g.appendChild(o); });
+      mT.appendChild(g);
+    }
+    group('Compatibili con queste cuffie', m.tx);
+    group('Altri trasmettitori', ALLTX.map(function(x){ return x[0]; }).filter(function(n){ return m.tx.indexOf(n) < 0; }));
+    mT.value = m.tx[0];
+    setRange();
+  }
+  function setRange(){ var r = txRange(mT.value); mR.value = r ? r : ''; }
+  function buildMail(){
+    var m = MAIL[mC.value], tx = mT.value, r = mR.value.trim(), nome = mN.value.trim();
+    var P = '<p style="margin:0 0 12px;font-family:Helvetica,Arial,sans-serif;font-size:14px;">';
+    var out = [];
+    out.push('<p style="margin:0 0 12px;text-align:center;font-family:Helvetica,Arial,sans-serif;font-size:14px;color:#FF2600;font-weight:bold;"><b>Prego inviare riscontro di avvenuta ricezione</b></p>');
+    out.push(P + 'Salve,</p>');
+    out.push(P + ORIGINI[mO.value] + '</p>');
+    out.push(P + 'L’attrezzatura arriverà <b>carica, igienizzata, e pronta per l’uso</b>. I nostri <b>processi di igienizzazione</b> delle cuffie sono <b><u>certificati dal CSI di Bollate.</u></b></p>');
+    out.push(P + 'Colgo l’occasione per ricordare che il modello di cuffie messo a disposizione è l’<b>' + esc(m.c) + '</b>, mentre il trasmettitore è il <b>' + esc(tx) + '</b>' + (r ? ', <b>' + esc(r) + ' metri di raggio d’azione</b>' : '') + '.</p>');
+    out.push(P + 'Attendo Sue</p>');
+    out.push(P + 'Cordiali Saluti</p>');
+    out.push(P + esc(nome || '[Nome]') + '</p>');
+    out.push(P + '<a href="https://silentsystem.it/video-eventi/">Video Eventi</a><br><a href="https://silentsystem.it/foto-eventi/">Foto Eventi</a></p>');
+    return '<div style="font-family:Helvetica,Arial,sans-serif;font-size:14px;color:#000000;">' + out.join('') + '</div>';
+  }
+  function renderMail(){ var h = buildMail(); mP.innerHTML = h; mH.value = h; }
+  function say(t){ mMsg.textContent = t; setTimeout(function(){ if (mMsg.textContent === t) mMsg.textContent = ''; }, 3000); }
+  mC.addEventListener('change', function(){ fillTx(); renderMail(); });
+  mT.addEventListener('change', function(){ setRange(); renderMail(); });
+  [mR, mN].forEach(function(el){ el.addEventListener('input', renderMail); });
+  mO.addEventListener('change', renderMail);
+  document.getElementById('mail-reset').addEventListener('click', function(){
+    mO.value = 'email'; mC.value = '0'; fillTx(); mN.value = ''; mMsg.textContent = ''; renderMail();
+  });
+  document.getElementById('mail-copy').addEventListener('click', function(){
+    var html = buildMail(), text = mP.innerText;
+    function fallback(){
+      var range = document.createRange(); range.selectNodeContents(mP);
+      var sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
+      var ok = false; try { ok = document.execCommand('copy'); } catch (e) {}
+      say(ok ? 'Mail copiata' : 'Mail selezionata: premi Cmd+C o Ctrl+C');
+    }
+    try {
+      if (window.ClipboardItem && navigator.clipboard && navigator.clipboard.write){
+        navigator.clipboard.write([new ClipboardItem({ 'text/html': new Blob([html], { type:'text/html' }), 'text/plain': new Blob([text], { type:'text/plain' }) })]).then(function(){ say('Mail copiata'); }, fallback);
+      } else { fallback(); }
+    } catch (e) { fallback(); }
+  });
+  document.getElementById('mail-copy-html').addEventListener('click', function(){
+    var html = buildMail();
+    function fallback(){ mH.closest('details').open = true; mH.focus(); mH.select(); say('Codice selezionato: premi Cmd+C o Ctrl+C'); }
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(html).then(function(){ say('HTML copiato'); }, fallback); }
+      else { fallback(); }
+    } catch (e) { fallback(); }
+  });
+  fillTx(); renderMail();
+})();
+</script>
+
+</body>
+</html>
